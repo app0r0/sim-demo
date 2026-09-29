@@ -1,7 +1,7 @@
-import type { Simulation } from "@/data/simulations/types";
+import type { Question, Simulation } from "@/data/simulations/types";
 import { OPEN_CHAT_URL } from "@/config";
 import { computeResult, type Answers } from "@/lib/scoring";
-import { AxisBarChart } from "./AxisBarChart";
+import { SubjectBarChart } from "./SubjectBarChart";
 
 export function ResultView({
   sim,
@@ -15,64 +15,76 @@ export function ResultView({
   onRestart: () => void;
 }) {
   const r = computeResult(sim, answers);
-  const topLabels = r.topAxes.map((a) => `「${sim.axes[a].label}」`).join("と");
+  const qNo = (q: Question) => sim.questions.indexOf(q) + 1;
 
   return (
     <div className="space-y-5">
       <div className="text-center">
         <p className="inline-flex items-center gap-1.5 rounded-full bg-ok-soft px-3 py-1 text-xs font-bold text-ok">
           <span aria-hidden>✓</span>
-          {sim.questions.length}問のシミュレーションが完了しました
+          {r.total}問のシミュレーションが完了しました
         </p>
         <h1 data-autofocus tabIndex={-1} className="mt-3 text-2xl font-bold outline-none">
           半年間の研究、おつかれさまでした
         </h1>
-        <p className="mt-2 text-sm text-ink-muted">今回の回答をもとにした振り返りです。</p>
       </div>
 
-      <section aria-labelledby="knowledge" className="rounded-2xl bg-navy p-5 text-white">
-        <h2 id="knowledge" className="text-xs font-bold tracking-wider text-white/80">
-          知識チェック
+      <section aria-labelledby="total" className="rounded-2xl bg-navy p-5 text-white">
+        <h2 id="total" className="text-xs font-bold tracking-wider text-white/80">
+          総合スコア
         </h2>
         <p className="mt-2 flex items-baseline gap-1">
-          <span className="text-5xl font-bold tabular-nums">{r.knowledgeCorrect}</span>
-          <span className="text-lg text-white/80">/ {r.knowledgeTotal}問 正解</span>
+          <span className="text-5xl font-bold tabular-nums">{r.correct}</span>
+          <span className="text-lg text-white/80">/ {r.total}問 正解</span>
         </p>
-        <p className="mt-3 text-sm leading-relaxed text-white/85">
-          わからなかった問題は、下の「回答と解説を振り返る」から見直せます。
+        <p className="mt-3 text-sm leading-relaxed text-white/90">
+          {r.correct > 0
+            ? `${r.total}つの場面のうち${r.correct}つで、あなたの大学の知識が使われました。`
+            : "この仕事では、大学で学ぶさまざまな科目が使われます。下の一覧で、どの場面で使われるのかを見てみましょう。"}
         </p>
       </section>
 
-      <section aria-labelledby="tendency" className="rounded-2xl border border-line bg-white p-5">
-        <h2 id="tendency" className="text-base font-bold">
-          判断傾向
+      <section aria-labelledby="by-subject" className="rounded-2xl border border-line bg-white p-5">
+        <h2 id="by-subject" className="text-base font-bold">
+          科目別スコア
         </h2>
-        <p className="mt-1 text-xs text-ink-muted">
-          判断問題{r.axisMax}問で選んだ軸の数です（各軸 0〜{r.axisMax}）。
-        </p>
-        <div className="mt-4">
-          <AxisBarChart sim={sim} scores={r.axisScores} max={r.axisMax} highlight={r.topAxes} />
+        <p className="mt-1 text-xs text-ink-muted">棒の長さはその科目の問題数、濃い部分が正解数です。</p>
+        <div className="mt-3">
+          <SubjectBarChart scores={r.categories} />
         </div>
       </section>
 
-      <section aria-labelledby="comment" className="rounded-2xl border border-line bg-white p-5">
-        <h2 id="comment" className="text-base font-bold">
-          今回表れた出発点
+      {r.correctQuestions.length > 0 && (
+        <SceneList
+          id="used"
+          heading="あなたの知識が使われた場面"
+          questions={r.correctQuestions}
+          qNo={qNo}
+          tone="ok"
+        />
+      )}
+
+      {r.missedQuestions.length > 0 && (
+        <SceneList
+          id="subjects"
+          heading="この仕事では、大学のこの科目が使われます"
+          questions={r.missedQuestions}
+          qNo={qNo}
+          tone="accent"
+        />
+      )}
+
+      <section aria-labelledby="related" className="rounded-2xl border border-line bg-white p-5">
+        <h2 id="related" className="text-base font-bold">
+          {sim.related.heading}
         </h2>
-        {r.topAxes.length > 1 && (
-          <p className="mt-2 text-sm text-ink-muted">今回は{topLabels}が同じ数で並びました。</p>
-        )}
-        <div className="mt-3 space-y-3">
-          {r.topAxes.map((a) => (
-            <div key={a} className="rounded-xl border-l-4 border-accent bg-accent-soft p-4">
-              <p className="text-sm font-bold text-accent">
-                {sim.axes[a].label}：{sim.axes[a].description}
-              </p>
-              <p className="mt-1.5 text-[15px] leading-relaxed">{sim.axes[a].comment}</p>
-            </div>
+        <ul className="mt-3 space-y-2">
+          {sim.related.items.map((it) => (
+            <li key={it.name} className="rounded-xl bg-surface p-3 text-sm leading-relaxed">
+              <span className="font-bold">{it.name}</span>：{it.text}
+            </li>
           ))}
-        </div>
-        <p className="mt-4 text-[15px] font-bold leading-relaxed">{sim.closingNote}</p>
+        </ul>
       </section>
 
       <section className="rounded-2xl border-2 border-accent bg-white p-5 text-center">
@@ -96,7 +108,7 @@ export function ResultView({
           onClick={onReview}
           className="min-h-12 w-full rounded-xl border-2 border-accent bg-white px-4 text-sm font-bold text-accent hover:bg-accent-soft"
         >
-          {sim.questions.length}問の回答と解説を振り返る
+          {r.total}問の回答と解説を振り返る
         </button>
         <button
           type="button"
@@ -107,5 +119,40 @@ export function ResultView({
         </button>
       </div>
     </div>
+  );
+}
+
+function SceneList({
+  id,
+  heading,
+  questions,
+  qNo,
+  tone,
+}: {
+  id: string;
+  heading: string;
+  questions: Question[];
+  qNo: (q: Question) => number;
+  tone: "ok" | "accent";
+}) {
+  return (
+    <section aria-labelledby={id} className="rounded-2xl border border-line bg-white p-5">
+      <h2 id={id} className="text-base font-bold">
+        {heading}
+      </h2>
+      <ul className="mt-3 space-y-2">
+        {questions.map((q) => (
+          <li
+            key={q.id}
+            className={`rounded-xl border-l-4 p-3 ${tone === "ok" ? "border-ok bg-ok-soft" : "border-accent bg-accent-soft"}`}
+          >
+            <p className={`text-sm font-bold ${tone === "ok" ? "text-ok" : "text-accent"}`}>
+              Q{qNo(q)}　{q.subject}
+            </p>
+            <p className="mt-0.5 text-sm leading-relaxed">{q.scene}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

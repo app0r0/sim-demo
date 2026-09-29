@@ -62,39 +62,32 @@ export function QuestionView({
           <span className="text-xs font-bold tracking-wider text-accent">
             QUESTION {String(index + 1).padStart(2, "0")}
           </span>
-          <span
-            className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${
-              q.type === "knowledge" ? "bg-ok-soft text-ok" : "bg-accent-soft text-accent"
-            }`}
-          >
-            {q.type === "knowledge" ? "知識チェック" : "判断（正解なし）"}
+          <span className="rounded-md bg-accent-soft px-2 py-0.5 text-[11px] font-bold text-accent">
+            関連科目：{q.subject}
           </span>
         </div>
         <h2 data-autofocus tabIndex={-1} className="mt-3 text-lg font-bold leading-relaxed outline-none">
           {q.prompt}
         </h2>
         <p className="mt-2 text-xs text-ink-muted">
-          {q.type === "knowledge"
-            ? "最も適切だと思うものを、1つ選んでください。"
-            : "正解はありません。あなたならどうするか、1つ選んでください。"}
+          {q.correct.length > 1
+            ? `正解は${q.correct.length}つあります。そのうち1つを選んでください。`
+            : "最も適切だと思うものを、1つ選んでください。"}
         </p>
 
         <ul className="mt-4 space-y-2.5">
           {q.choices.map((c) => {
             const isSelected = selected === c.id;
-            const isCorrect = q.type === "knowledge" && c.id === q.correct;
+            const isCorrect = q.correct.includes(c.id);
             let state = "border-line bg-white hover:border-accent hover:bg-accent-soft";
             let badge: string | null = null;
             if (answered) {
-              if (q.type === "knowledge" && isCorrect) {
+              if (isCorrect) {
                 state = "border-ok bg-ok-soft";
                 badge = "正解";
-              } else if (isSelected && q.type === "knowledge") {
+              } else if (isSelected) {
                 state = "border-ng bg-ng-soft";
                 badge = "あなたの回答";
-              } else if (isSelected) {
-                state = "border-accent bg-accent-soft";
-                badge = "あなたの選択";
               } else {
                 state = "border-line bg-white text-ink-muted";
               }
@@ -122,7 +115,7 @@ export function QuestionView({
                     {badge && (
                       <span
                         className={`ml-2 inline-block rounded px-1.5 py-0.5 align-middle text-[11px] font-bold text-white ${
-                          badge === "正解" ? "bg-ok" : badge === "あなたの回答" ? "bg-ng" : "bg-accent"
+                          badge === "正解" ? "bg-ok" : "bg-ng"
                         }`}
                       >
                         {badge}
@@ -137,7 +130,7 @@ export function QuestionView({
 
         {answered && (
           <div ref={feedbackRef} className="mt-6 scroll-mt-4 border-t border-line pt-5">
-            <Feedback sim={sim} question={q} selected={selected} autoFocus />
+            <Feedback question={q} selected={selected} autoFocus />
           </div>
         )}
 

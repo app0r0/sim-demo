@@ -28,6 +28,7 @@ export function ReviewView({ sim, answers, onBack }: { sim: Simulation; answers:
             <p className="text-xs font-bold text-accent">
               QUESTION {String(i + 1).padStart(2, "0")}・フェーズ{q.phase} {phase?.name}
             </p>
+            <p className="mt-1 text-xs text-ink-muted">関連科目：{q.subject}</p>
             <h2 className="mt-2 text-base font-bold leading-relaxed">{q.prompt}</h2>
             {picked && selected ? (
               <>
@@ -35,7 +36,7 @@ export function ReviewView({ sim, answers, onBack }: { sim: Simulation; answers:
                   あなたの回答：{selected}. {picked.text}
                 </p>
                 <div className="mt-4">
-                  <Feedback sim={sim} question={q} selected={selected} />
+                  <Feedback question={q} selected={selected} />
                 </div>
               </>
             ) : (

@@ -1,37 +1,39 @@
-import { AXES, type Axis, type ChoiceId, type Simulation } from "@/data/simulations/types";
+import type { ChoiceId, Question, Simulation } from "@/data/simulations/types";
 
 export type Answers = Record<string, ChoiceId>;
 
+export type CategoryScore = { id: string; label: string; correct: number; total: number };
+
 export type SimResult = {
-  knowledgeCorrect: number;
-  knowledgeTotal: number;
-  axisScores: Record<Axis, number>;
-  /** 判断問題の数（= 各軸の最大値） */
-  axisMax: number;
-  /** 最高点の軸（同点はすべて。AXES の順） */
-  topAxes: Axis[];
+  correct: number;
+  total: number;
+  categories: CategoryScore[];
+  correctQuestions: Question[];
+  missedQuestions: Question[];
 };
 
+export const isCorrect = (q: Question, picked: ChoiceId | undefined) =>
+  picked !== undefined && q.correct.includes(picked);
+
 export function computeResult(sim: Simulation, answers: Answers): SimResult {
-  let knowledgeCorrect = 0;
-  let knowledgeTotal = 0;
-  let axisMax = 0;
-  const axisScores: Record<Axis, number> = { explore: 0, verify: 0, business: 0, collab: 0 };
+  const correctQuestions = sim.questions.filter((q) => isCorrect(q, answers[q.id]));
+  const missedQuestions = sim.questions.filter((q) => !isCorrect(q, answers[q.id]));
 
-  for (const q of sim.questions) {
-    const picked = answers[q.id];
-    if (q.type === "knowledge") {
-      knowledgeTotal++;
-      if (picked === q.correct) knowledgeCorrect++;
-    } else {
-      axisMax++;
-      const choice = q.choices.find((c) => c.id === picked);
-      if (choice) axisScores[choice.axis]++;
-    }
-  }
+  const categories = sim.categories.map((c) => {
+    const qs = sim.questions.filter((q) => q.category === c.id);
+    return {
+      id: c.id,
+      label: c.label,
+      total: qs.length,
+      correct: qs.filter((q) => isCorrect(q, answers[q.id])).length,
+    };
+  });
 
-  const top = Math.max(...AXES.map((a) => axisScores[a]));
-  const topAxes = top > 0 ? AXES.filter((a) => axisScores[a] === top) : [];
-
-  return { knowledgeCorrect, knowledgeTotal, axisScores, axisMax, topAxes };
+  return {
+    correct: correctQuestions.length,
+    total: sim.questions.length,
+    categories,
+    correctQuestions,
+    missedQuestions,
+  };
 }

@@ -1,8 +1,13 @@
-import { AXES, type Simulation } from "@/data/simulations/types";
+import type { Simulation } from "@/data/simulations/types";
 
 export function Intro({ sim, onStart }: { sim: Simulation; onStart: () => void }) {
-  const knowledgeCount = sim.questions.filter((q) => q.type === "knowledge").length;
-  const judgmentCount = sim.questions.length - knowledgeCount;
+  // 「総合」のように他の問題の応用である分類は、科目紹介から外す
+  const subjectGroups = sim.categories
+    .map((c) => ({
+      ...c,
+      subjects: sim.questions.filter((q) => q.category === c.id).map((q) => q.subject),
+    }))
+    .filter((g) => g.subjects.length > 0 && !g.subjects.every((s) => s.startsWith("総合")));
 
   return (
     <div className="space-y-6">
@@ -30,9 +35,9 @@ export function Intro({ sim, onStart }: { sim: Simulation; onStart: () => void }
       </section>
 
       <dl className="grid grid-cols-3 gap-2 text-center">
-        <Stat term="設問" value={`全${sim.questions.length}問`} sub={`知識${knowledgeCount}・判断${judgmentCount}`} />
+        <Stat term="設問" value={`全${sim.questions.length}問`} sub="選択式" />
         <Stat term="所要時間" value={`約${sim.duration}`} sub="スマホで完結" />
-        <Stat term="判断の軸" value={`${AXES.length}つ`} sub="正解のない問い" />
+        <Stat term="関連科目" value={`${sim.categories.length}分野`} sub="科目別に振り返り" />
       </dl>
 
       <section aria-labelledby="phases" className="rounded-2xl border border-line bg-white p-5">
@@ -51,18 +56,18 @@ export function Intro({ sim, onStart }: { sim: Simulation; onStart: () => void }
         </ol>
       </section>
 
-      <section aria-labelledby="axes" className="rounded-2xl border border-line bg-white p-5">
-        <h2 id="axes" className="text-base font-bold">
-          判断問題で見る、4つの軸
+      <section aria-labelledby="subjects" className="rounded-2xl border border-line bg-white p-5">
+        <h2 id="subjects" className="text-base font-bold">
+          この仕事で使う、大学の科目
         </h2>
         <p className="mt-1 text-sm leading-relaxed text-ink-muted">
-          判断問題に正解はありません。選んだ選択肢から、あなたの判断の出発点を振り返ります。
+          各問には、関連する大学の科目がついています。結果画面では科目別に振り返ります。
         </p>
-        <ul className="mt-3 grid grid-cols-2 gap-2">
-          {AXES.map((a) => (
-            <li key={a} className="rounded-xl bg-surface p-3">
-              <p className="font-bold">{sim.axes[a].label}</p>
-              <p className="mt-0.5 text-xs text-ink-muted">{sim.axes[a].description}</p>
+        <ul className="mt-3 space-y-2">
+          {subjectGroups.map((g) => (
+            <li key={g.id} className="rounded-xl bg-surface p-3">
+              <p className="font-bold">{g.label}</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-ink-muted">{g.subjects.join("／")}</p>
             </li>
           ))}
         </ul>
